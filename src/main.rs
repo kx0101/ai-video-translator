@@ -1,78 +1,121 @@
 mod audio;
 mod config;
 mod error;
+mod translation;
 mod video;
 
-use anyhow::Result;
-use clap::{Arg, Command};
+use crate::config::Config;
+use clap::{command, Parser};
 use std::path::PathBuf;
-use tracing::{error, info};
+use tracing::error;
+use translation::GoogleTranslationService;
+
+const DEFAULT_CONFIG_PATH: &str = "config.toml";
+
+#[derive(Parser, Debug)]
+#[command(
+    name = "Auto Dubbing",
+    version = "1.0.0",
+    about = "Automatic video dubbing with AI translation and lip sync"
+)]
+pub struct Args {
+    #[arg(short, long)]
+    pub input: PathBuf,
+
+    // we cant generate the final video yet
+    // #[arg(short, long)]
+    // pub output: PathBuf,
+    #[arg(short = 's', long = "source-lang", default_value = "en")]
+    pub source_lang: String,
+
+    #[arg(short = 't', long = "target-lang")]
+    pub target_lang: String,
+}
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+    dotenv::dotenv().ok();
 
-    let video_processor = video::VideoProcessor::new(30.0);
-    let audio_processor = audio::AudioProcessor::new(44100);
+    let config = Config::load(DEFAULT_CONFIG_PATH).unwrap();
+    let args = Args::parse();
+
+    let audio_processor = audio::AudioProcessor::new(config.processing.audio_sample_rate);
 
     let _ = audio_processor
         .extract_audio(
-            &PathBuf::from("input_video.mp4"),
-            &PathBuf::from("output_audio.wav"),
+            &PathBuf::from(&args.input),
+            &PathBuf::from("extracted_audio.wav"),
         )
         .await
         .unwrap_or_else(|e| {
             error!("Failed to extract audio: {}", e);
         });
 
-    let _ = audio_processor
-        .normalize_audio(
-            &PathBuf::from("output_audio.wav"),
-            &PathBuf::from("normalized_audio.wav"),
-        )
-        .await;
-
-    video_processor
-        .extract_frames(&PathBuf::from("input_video.mp4"), &PathBuf::from("frames"))
-        .await
-        .unwrap_or_else(|e| {
-            error!("Failed to extract frames: {}", e);
-        });
-
-    video_processor
-        .combine_frames_with_audio(
-            &PathBuf::from("frames"),
-            &PathBuf::from("normalized_audio.wav"),
-            &PathBuf::from("output_video_from_func.mp4"),
+    audio_processor
+        .resample_audio(
+            &PathBuf::from("extracted_audio.wav"),
+            &PathBuf::from("final_audio.wav"),
+            config.processing.stt_sample_rate,
         )
         .await
         .unwrap_or_else(|e| {
-            error!("Failed to combine frames with audio: {}", e);
+            error!("Failed to resample audio: {}", e);
         });
 
-    match video_processor.get_video_info(&PathBuf::from("output_video_from_func.mp4")) {
-        Ok(info) => {
-            info!("Video Info: {:?}", info);
-        }
-        Err(e) => {
-            error!("Failed to get video info: {}", e);
-        }
-    }
+    let audio_base64 = audio_processor
+        .audio_to_base64(&PathBuf::from("final_audio.wav"))
+        .unwrap_or_else(|e| {
+            error!("Failed to convert audio to base64: {}", e);
+            String::new()
+        });
 
-    match video_processor
-        .resize_video(
-            &PathBuf::from("output_video_from_func.mp4"),
-            &PathBuf::from("resized_video.mp4"),
-            1280,
-            720,
+    let translation_processor = GoogleTranslationService::new(config.google.api_key);
+
+    let transcript = translation_processor
+        .transcribe_audio_with_alternatives(
+            &audio_base64,
+            &config.processing.alternative_languages,
+            config.processing.stt_sample_rate,
         )
         .await
-    {
-        Ok(_) => {
-            info!("Video resized successfully.");
-        }
-        Err(e) => {
-            error!("Failed to resize video: {}", e);
-        }
+        .unwrap_or_else(|e| {
+            error!("Failed to transcribe audio: {}", e);
+            String::new()
+        });
+
+    println!("Transcript: {}", transcript);
+
+    if transcript.is_empty() {
+        error!("No transcript available, exiting.");
+        return;
     }
+
+    let mut language_used = if !args.source_lang.is_empty() {
+        args.source_lang.clone()
+    } else {
+        config.processing.alternative_languages[0].clone()
+    };
+
+    if language_used.is_empty() {
+        language_used = translation_processor
+            .detect_language(&transcript)
+            .await
+            .unwrap_or_else(|e| {
+                error!("Failed to detect language: {}", e);
+                String::new()
+            });
+    };
+
+    println!("Language: {}", language_used);
+
+    let translated = translation_processor
+        .translate_text(&transcript, &language_used, &args.target_lang)
+        .await
+        .unwrap_or_else(|e| {
+            error!("Failed to translate text: {}", e);
+            String::new()
+        });
+
+    println!("Translated Text: {}", translated);
 }

@@ -127,4 +127,44 @@ impl AudioProcessor {
         );
         Ok(())
     }
+
+    pub async fn resample_audio(
+        &self,
+        input_path: &Path,
+        output_path: &Path,
+        target_sample_rate: u32,
+    ) -> Result<()> {
+        info!(
+            "Resampling audio from {} to {} Hz",
+            input_path.display(),
+            target_sample_rate
+        );
+
+        let output = Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-i",
+                input_path.to_str().unwrap(),
+                "-ar",
+                &target_sample_rate.to_string(),
+                "-ac",
+                "1", // mono
+                "-acodec",
+                "pcm_s16le", // LINEAR16
+                output_path.to_str().unwrap(),
+            ])
+            .output()
+            .map_err(|e| CustomError::AudioProcessing(format!("Failed to run ffmpeg: {}", e)))?;
+
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(CustomError::AudioProcessing(format!(
+                "ffmpeg resample failed with error: {}",
+                error
+            )));
+        }
+
+        info!("Audio resampled successfully to: {}", output_path.display());
+        Ok(())
+    }
 }

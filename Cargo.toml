@@ -1,0 +1,37 @@
+[package]
+name = "automatic-dubbing-and-translation"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json", "multipart"] }
+anyhow = "1.0"
+thiserror = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+uuid = { version = "1.0", features = ["v4"] }
+tempfile = "3.0"
+futures = "0.3"
+async-trait = "0.1"
+
+rodio = "0.17"
+hound = "3.5"
+rubato = "0.14"
+
+ffmpeg-next = "6.0"
+
+base64 = "0.21"
+mime = "0.3"
+
+config = "0.13"
+dotenv = "0.15"
+
+rayon = "1.7"
+toml = "0.8.23"
+
+[dev-dependencies]
+tokio-test = "0.4"

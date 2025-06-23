@@ -33,7 +33,7 @@ pub struct AzureConfig {
 pub struct ProcessingConfig {
     pub temp_dir: String,
     pub audio_sample_rate: u32,
-    pub video_fps: f32,
+    pub video_fps: f64,
     pub max_concurrent_requests: usize,
 }
 

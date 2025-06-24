@@ -1,5 +1,5 @@
 /target
 config.toml
 .env
-/frames
+/extracted_frames
 service_account.json

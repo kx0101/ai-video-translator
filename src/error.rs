@@ -11,8 +11,8 @@ pub enum CustomError {
     #[error("Translation error: {0}")]
     Translation(String),
 
-    #[error("Video synthesis error: {0}")]
-    VideoSynthesis(String),
+    #[error("Voice synthesis error: {0}")]
+    VoiceSynthesis(String),
 
     #[error("Lip sync error: {0}")]
     LipSync(String),

@@ -7,7 +7,6 @@ use toml;
 pub struct Config {
     pub google: GoogleConfig,
     pub elevenlabs: ElevenLabsConfig,
-    pub azure: AzureConfig,
     pub processing: ProcessingConfig,
 }
 
@@ -19,13 +18,9 @@ pub struct GoogleConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ElevenLabsConfig {
     pub api_key: String,
-    pub voice_id: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct AzureConfig {
-    pub speech_key: String,
-    pub speech_region: String,
+    pub voice_id: String,
+    pub model_id: String,
+    pub audio_format: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -44,11 +39,9 @@ impl Default for Config {
             },
             elevenlabs: ElevenLabsConfig {
                 api_key: std::env::var("ELEVENLABS_API_KEY").unwrap_or_default(),
-                voice_id: None,
-            },
-            azure: AzureConfig {
-                speech_key: std::env::var("AZURE_SPEECH_KEY").unwrap_or_default(),
-                speech_region: std::env::var("AZURE_SPEECH_REGION").unwrap_or_default(),
+                voice_id: "9F4C8ztpNUmXkdDDbz3J".to_string(),
+                model_id: "eleven_multilingual_v2".to_string(),
+                audio_format: "mp3_44100_128".to_string(),
             },
             processing: ProcessingConfig {
                 audio_sample_rate: 44100,

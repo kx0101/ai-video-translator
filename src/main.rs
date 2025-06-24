@@ -3,6 +3,7 @@ mod config;
 mod error;
 mod translation;
 mod video;
+mod voice_synthesis;
 
 use crate::config::Config;
 use clap::{command, Parser};
@@ -22,10 +23,10 @@ pub struct Args {
     #[arg(short, long)]
     pub input: PathBuf,
 
-    // we cant generate the final video yet
-    // #[arg(short, long)]
-    // pub output: PathBuf,
-    #[arg(short = 's', long = "source-lang", default_value = "en")]
+    #[arg(short, long)]
+    pub output: PathBuf,
+
+    #[arg(short = 's', long = "source-lang", default_value = "en-US")]
     pub source_lang: String,
 
     #[arg(short = 't', long = "target-lang")]
@@ -118,4 +119,57 @@ async fn main() {
         });
 
     println!("Translated Text: {}", translated);
+
+    // let's help eleven labs a bit
+    // because they make a lot of pauses in the middle of sentences
+    let mut translated = translated.replace('.', ",").to_lowercase();
+    if let Some(find_last_comma) = translated.rfind(',') {
+        translated.replace_range(find_last_comma..=find_last_comma, ".");
+    }
+
+    let voice_synthesis_processor =
+        voice_synthesis::VoiceSynthesizer::new(config.elevenlabs.clone());
+
+    let translated_audio = voice_synthesis_processor
+        .text_to_speech(&translated, &config.elevenlabs.voice_id)
+        .await
+        .unwrap_or_else(|e| {
+            error!("Failed to synthesize voice: {}", e);
+            Vec::new()
+        });
+
+    if translated_audio.is_empty() {
+        error!("No audio generated, exiting.");
+        return;
+    }
+
+    voice_synthesis_processor
+        .save_audio(&translated_audio, &PathBuf::from("translated_audio.mp3"))
+        .await
+        .unwrap_or_else(|e| {
+            error!("Failed to save audio: {}", e);
+        });
+
+    let video_processor = video::VideoProcessor::new(config.processing.video_fps);
+
+    video_processor
+        .extract_frames(
+            &PathBuf::from(&args.input),
+            &PathBuf::from("extracted_frames"),
+        )
+        .await
+        .unwrap_or_else(|e| {
+            error!("Failed to extract frames: {}", e);
+        });
+
+    video_processor
+        .combine_frames_with_audio(
+            &PathBuf::from("extracted_frames"),
+            &PathBuf::from("translated_audio.mp3"),
+            &PathBuf::from(&args.output),
+        )
+        .await
+        .unwrap_or_else(|e| {
+            error!("Failed to combine frames with audio: {}", e);
+        });
 }

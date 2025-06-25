@@ -7,6 +7,7 @@ use toml;
 pub struct Config {
     pub google: GoogleConfig,
     pub elevenlabs: ElevenLabsConfig,
+    pub lipsync: LipSyncConfig,
     pub processing: ProcessingConfig,
 }
 
@@ -21,6 +22,18 @@ pub struct ElevenLabsConfig {
     pub voice_id: String,
     pub model_id: String,
     pub audio_format: String,
+    pub stability: f32,
+    pub similarity_boost: f32,
+    pub style: f32,
+    pub use_speaker_boost: bool,
+    pub speed: f32,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LipSyncConfig {
+    pub api_key: String,
+    pub model: String,
+    pub ngrok_url: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -42,6 +55,16 @@ impl Default for Config {
                 voice_id: "9F4C8ztpNUmXkdDDbz3J".to_string(),
                 model_id: "eleven_multilingual_v2".to_string(),
                 audio_format: "mp3_44100_128".to_string(),
+                stability: 0.75,
+                similarity_boost: 0.80,
+                style: 0.0,
+                use_speaker_boost: false,
+                speed: 1.15,
+            },
+            lipsync: LipSyncConfig {
+                api_key: std::env::var("WAV2LIP_API_KEY").unwrap_or_default(),
+                model: "lipsync-2".to_string(),
+                ngrok_url: "https://ab6b-91-140-28-26.ngrok-free.app".to_string(),
             },
             processing: ProcessingConfig {
                 audio_sample_rate: 44100,

@@ -41,11 +41,11 @@ impl VoiceSynthesizer {
             text: text.to_string(),
             model_id: self.config.model_id.clone(),
             voice_settings: VoiceSettings {
-                stability: 0.75,
-                similarity_boost: 0.80,
-                style: 0.0,
-                use_speaker_boost: false,
-                speed: 1.20,
+                stability: self.config.stability,
+                similarity_boost: self.config.similarity_boost,
+                style: self.config.style,
+                use_speaker_boost: self.config.use_speaker_boost,
+                speed: self.config.speed,
             },
         };
 

@@ -73,10 +73,18 @@ impl VideoProcessor {
                 audio_path.to_str().unwrap(),
                 "-c:v",
                 "libx264",
+                "-preset",
+                "slow", // slower preset = better compression
+                "-crf",
+                "23",
                 "-c:a",
                 "aac",
+                "-b:a",
+                "128k", // audio bitrate
                 "-pix_fmt",
                 "yuv420p",
+                "-movflags",
+                "+faststart", // for better streaming compatibility
                 "-shortest",
                 output_path.to_str().unwrap(),
             ])

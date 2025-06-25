@@ -1,12 +1,14 @@
 mod audio;
 mod config;
 mod error;
+mod lipsync;
 mod translation;
 mod video;
 mod voice_synthesis;
 
 use crate::config::Config;
 use clap::{command, Parser};
+use lipsync::LipSyncService;
 use std::path::PathBuf;
 use tracing::error;
 use translation::GoogleTranslationService;
@@ -15,9 +17,9 @@ const DEFAULT_CONFIG_PATH: &str = "config.toml";
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "Auto Dubbing",
+    name = "AI Video Translator",
     version = "1.0.0",
-    about = "Automatic video dubbing with AI translation and lip sync"
+    about = "AI-assisted video translation and lip sync tool"
 )]
 pub struct Args {
     #[arg(short, long)]
@@ -172,4 +174,34 @@ async fn main() {
         .unwrap_or_else(|e| {
             error!("Failed to combine frames with audio: {}", e);
         });
+
+    let lip_sync_processor = LipSyncService::new();
+    let ngrok_host = &config.lipsync.ngrok_url.trim_end_matches('/');
+
+    let video_url = format!(
+        "{}/{}",
+        ngrok_host,
+        args.input.file_name().unwrap().to_string_lossy()
+    );
+    let audio_url = format!("{}/translated_audio.mp3", ngrok_host);
+
+    let final_url =
+        LipSyncService::run_sync_client(&video_url, &audio_url, &config.lipsync.api_key).await;
+
+    match final_url {
+        Ok(Some(url)) => {
+            println!("Lip synced video URL: {}", url);
+
+            let output_path = PathBuf::from(&args.output);
+            if let Err(e) = lip_sync_processor.download_result(&url, &output_path).await {
+                error!("Failed to download lip synced video: {}", e);
+            }
+        }
+        Ok(None) => {
+            eprintln!("Lip sync generation failed in Python client.");
+        }
+        Err(e) => {
+            error!("Error running lip sync client: {}", e);
+        }
+    }
 }

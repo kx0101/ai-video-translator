@@ -1,8 +1,12 @@
 # AI Video Translator
 
-**AI-assisted video translation and lip sync tool built in Rust.**  
+**End-to-end AI-assisted video translation and dubbing pipeline built in Rust, integrates transcription, translation, voice synthesis, and lip syncing into a fully automated workflow**
 
 ---
+
+## Why
+
+Traditional video dubbing is manual and time-consuming. This tool automates the process using AI tooling, making it possible to localize content in any language with minimal effort, ideal for creators, educators and more!
 
 ![arch](https://github.com/user-attachments/assets/b1254380-7c4f-44e5-b73c-88a58ffd0be3)
 
@@ -14,46 +18,26 @@ https://github.com/user-attachments/assets/48a4931d-1055-44df-9818-5b8b485da122
 ## Output (I couldn't clone his exact voice due to limitations with the Starter Plan of ElevenLabs)
 https://github.com/user-attachments/assets/f440b48d-bdec-4c3c-8391-26491480cf00
 
-## Features
-
-- Audio extraction and resampling
-- Transcription using Google Speech-to-Text (with language detection support)
-- Translation to any target language (via Google Translate API)
-- Voice synthesis using ElevenLabs TTS
-- Accurate lip syncing using Sync.so
-- Reassembled video with translated voice-over and synced lips
-
----
-
 ## How It Works
 
 Here's a breakdown of the pipeline:
+```
+    Audio Extraction → via FFmpeg
 
-1. **Audio Extraction**  
-   Extracts audio from the input video using FFmpeg.
+    Resampling → normalized to STT input requirements
 
-2. **Resampling**  
-   Converts it to the sample rate expected by the STT API.
+    Transcription → via Google STT API
 
-3. **Transcription**  
-   Uses Google Cloud's Speech-to-Text to transcribe the spoken content.
+    Translation → auto-detected or user-defined source/target languages
 
-4. **Language Detection & Translation**  
-   Detects source language (or uses the provided one) and translates the transcript using Google Translate API.
+    Voice Synthesis → ElevenLabs API
 
-5. **Voice Synthesis**  
-   Sends the translated text to ElevenLabs to synthesize speech in a target voice.
+    Frame Extraction & Audio Merge → FFmpeg intermediate video
 
-6. **Frame Extraction & Video Rebuild**  
-   Extracts video frames and combines them with the translated audio as a temporary output.
+    Lip Sync → Sync.so REST API
 
-7. **Lip Sync**  
-   Uses [Sync.so](https://www.sync.so) to generate a final video where lip movements match the new audio perfectly.
-
-8. **Final Output**  
-   Downloads and saves the final lip synced, dubbed video to disk.
-
----
+    Final Output → Saved to disk
+```
 
 ## Example
 
